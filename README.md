@@ -6,3 +6,5 @@ When power generated exceeds that used by the house by 300W The system turns on 
 if the power is then higher still by 300W it turns on a second socket. I am sure this could be 
 ported to many different plaatforms. It was useful to m and maybe useful to others. I used the sonoff
 smart sokets flashed with Tomatsu. I used the sockets to turn on 500W heaters.
+I realise there is a considerable amount of code optimisation that could be carried out
+but for now this is working framework and gets to heats homes for zero cost
