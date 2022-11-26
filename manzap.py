@@ -43,8 +43,8 @@ def access_server(url_request):
   return r.json()
 
 # end-of-function definition
-res = requests.post("http://192.168.1.251/cm?cmnd=Power%20Off")
-res = requests.post("http://192.168.1.252/cm?cmnd=Power%20Off")
+res = requests.post("http://192.168.1.251/cm?cmnd=Power%20Off") # Sonoff smartplug 1
+res = requests.post("http://192.168.1.252/cm?cmnd=Power%20Off") # Sonoff smartplug 2
 
 while loop == 0:
     GPIO.output(Blue_LED_PIN, GPIO.HIGH)
@@ -56,15 +56,15 @@ while loop == 0:
     for item in response_data['harvi']:
        Solarp =  item['ectp1']
        if Solarp < 50:
-          Solarp = 0
-          switch = 0
+          Solarp = 0 # No solar being generated
+          switch = 0 # Smartplugs off
 
-    while Solarp != 0:
+    while Solarp != 0: # Solar power being generated
         GPIO.output(Green_LED_PIN, GPIO.HIGH)
         time.sleep(1)
         GPIO.output(Red_LED_PIN, GPIO.LOW)
         time.sleep(1)
-        print("Green leed on")
+        print("Green leed on") # indicate solar power generation
         print("Red led is off")
         response_data = access_server(zappi_url)
         for item in response_data['zappi']:
@@ -93,33 +93,33 @@ while loop == 0:
         print ("House is using: ", house,"W")
         print ("Spare: ", Excessp,"W")
 
-        if  switch == 1 and (Gridp < -300):
+        if  switch == 1 and (Gridp < -300): # If more than 300W after smartplug already on
             print("Heater 2 on")
-            res = requests.post("http://192.168.1.251/cm?cmnd=Power%20On")
-            switch = 2
+            res = requests.post("http://192.168.1.251/cm?cmnd=Power%20On") # turn on smartplug 2
+            switch = 2 # smartplug 2 is on
 
-        if  switch == 0 and (Gridp < -300):
-            print("Heater 1 on")
-            res = requests.post("http://192.168.1.252/cm?cmnd=Power%20On")
-            switch = 1
+        if  switch == 0 and (Gridp < -300): # if no smartplugs are on and 300W or more sent to grid
+            print("Heater 1 on") 
+            res = requests.post("http://192.168.1.252/cm?cmnd=Power%20On") # turn on smartplug 1
+            switch = 1 # smartplug 1 is on
             time.sleep(5)
 		
-        if  switch == 2 and (Gridp > 200):
+        if  switch == 2 and (Gridp > 200): # if smartplug 2 is on and using more than 200W 
             print("Heater 2 off")
-            res = requests.post("http://192.168.1.251/cm?cmnd=Power%20Off")
-            switch = 1
+            res = requests.post("http://192.168.1.251/cm?cmnd=Power%20Off") # turn off smartplug 2
+            switch = 1 # only smartplug 1 is on
             time.sleep(5)
 
-        if  switch == 1 and (Gridp > 200):
+        if  switch == 1 and (Gridp > 200): # if smartplug 2 is on and using more than 200W
             print("Heater 1 off")
-            res = requests.post("http://192.168.1.252/cm?cmnd=Power%20Off")
+            res = requests.post("http://192.168.1.252/cm?cmnd=Power%20Off") # turn off smartplug 1
             switch = 0
         time.sleep(20)
     GPIO.output(Red_LED_PIN, GPIO.HIGH)
     time.sleep(1)
     GPIO.output(Green_LED_PIN, GPIO.LOW)
     time.sleep(1)
-    print("Red LED is on")
+    print("Red LED is on") # indicate power generated
     print("Green led is off")
     time.sleep(600)
 
