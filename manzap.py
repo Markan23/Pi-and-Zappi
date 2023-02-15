@@ -5,32 +5,63 @@ from   requests.auth import HTTPDigestAuth
 import json
 import requests
 import RPi.GPIO as GPIO
-time.sleep(10)
+time.sleep(5)
 switch = 0
 loop = 0
+good = 0
 
-Red_LED_PIN = 17
-Green_LED_PIN = 15
-Blue_LED_PIN = 13
+Red_LED_PIN = 8
+Green_LED_PIN = 10
+Yellow_LED_PIN = 12
+
+Off = 'cm?cmnd=Power%20Off'
+On = 'cm?cmnd=Power%20On'
+h2_url = 'http://192.168.1.251/'  # Ip address of Sonoff socket 2
+h1_url = 'http://192.168.1.252/'  # IP address of Sonoff socket 1
+
 GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
+GPIO.setmode(GPIO.BOARD)
 
 GPIO.setup(Red_LED_PIN, GPIO.OUT)
 GPIO.setup(Green_LED_PIN, GPIO.OUT)
-GPIO.setup(Blue_LED_PIN, GPIO.OUT)
+GPIO.setup(Yellow_LED_PIN, GPIO.OUT)
 
-username    = '<Harvi Serial Number>'
-password    = '<Harvi Password>'
+username    = 'Your Own Serial Number'
+password    = 'Your Password'
 eddi_url    = 'https://s18.myenergi.net/cgi-jstatus-E'
 zappi_url   = 'https://s18.myenergi.net/cgi-jstatus-Z'
 harvi_url   = 'https://s18.myenergi.net/cgi-jstatus-H'
 status_url  = 'https://s18.myenergi.net/cgi-jstatus-*'
 dayhour_url = 'https://s18.myenergi.net/cgi-jdayhour-Z15536718-2021-10-20'
 
+def catch_fail_html(testhtml):
+    try:
+        response = requests.get(testhtml, timeout=3)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print("Request to website failed ", e)
+        # handle the exception here, such as retrying the request or using a backup data source
+    else:
+        # the request was successful and you can use the response
+        print("website response ", response.text)
+
+    return
 #define a function to access the server using a parsed URL
 def access_server(url_request):
+  good = 0
   headers = {'User-Agent': 'Wget/1.14 (linux-gnu)'}
-  r = requests.get(url_request, headers = headers, auth=HTTPDigestAuth(username, password), timeout=10)
+
+# -------------------------------------------------------------------------------------------
+  try:
+      r = requests.get(url_request, headers = headers, auth=HTTPDigestAuth(username, password), timeout=10)
+      r.raise_for_status()
+  except requests.exceptions.RequestException as e:
+      print("Request to website failed ", e)
+      # handle the exception here, such as retrying the request or using a backup data source
+  else:
+      # the request was successful and you can use the response
+      print("server response ", r.text)
+# -------------------------------------------------------------------------------------------
   if (r.status_code == 200):
       print ("") #"Login successful..")
   elif (r.status_code == 401):
@@ -40,35 +71,55 @@ def access_server(url_request):
       logging.info("Login unsuccessful, returned code: " + r.status_code)
       quit()
   #print (r.json())
+  good = 1
   return r.json()
 
 # end-of-function definition
-res = requests.post("http://192.168.1.251/cm?cmnd=Power%20Off") # Sonoff smartplug 1
-res = requests.post("http://192.168.1.252/cm?cmnd=Power%20Off") # Sonoff smartplug 2
+
+catch_fail_html(h2_url+Off)
+catch_fail_html(h1_url+Off)
+
+GPIO.output(Red_LED_PIN, GPIO.HIGH)
+time.sleep(0.5)
+GPIO.output(Red_LED_PIN, GPIO.LOW)
+time.sleep(0.5)
+GPIO.output(Yellow_LED_PIN, GPIO.HIGH)
+time.sleep(0.5)
+GPIO.output(Yellow_LED_PIN, GPIO.LOW)
+time.sleep(0.5)
+GPIO.output(Green_LED_PIN, GPIO.HIGH)
+time.sleep(0.5)
+GPIO.output(Green_LED_PIN, GPIO.LOW)
+time.sleep(0.5)
+GPIO.output(Red_LED_PIN, GPIO.HIGH)
+GPIO.output(Yellow_LED_PIN, GPIO.HIGH)
+GPIO.output(Green_LED_PIN, GPIO.HIGH)
+time.sleep(0.5)
+GPIO.output(Red_LED_PIN, GPIO.LOW)
+GPIO.output(Yellow_LED_PIN, GPIO.LOW)
+GPIO.output(Green_LED_PIN, GPIO.LOW)
 
 while loop == 0:
-    GPIO.output(Blue_LED_PIN, GPIO.HIGH)
-    time.sleep(1)
-    GPIO.output(Blue_LED_PIN, GPIO.LOW)
-    time.sleep(1)
-    print("Flash blue led")
+    print("loop start")
     response_data = access_server(harvi_url)
     for item in response_data['harvi']:
        Solarp =  item['ectp1']
-       if Solarp < 50:
-          Solarp = 0 # No solar being generated
-          switch = 0 # Smartplugs off
+       if Solarp < 75:
+          Solarp = 0
+          switch = 0
 
-    while Solarp != 0: # Solar power being generated
+    while Solarp != 0:
         GPIO.output(Green_LED_PIN, GPIO.HIGH)
+        time.sleep(1)
+        GPIO.output(Yellow_LED_PIN, GPIO.LOW)
         time.sleep(1)
         GPIO.output(Red_LED_PIN, GPIO.LOW)
         time.sleep(1)
-        print("Green leed on") # indicate solar power generation
+        print("Green led on")
+
         print("Red led is off")
         response_data = access_server(zappi_url)
         for item in response_data['zappi']:
-            print ("Query date: ", item['dat'])
             print ("Query date: ", item['dat'])
             print ("Query time: ", item['tim'])
             Gridv = item['vol']/10
@@ -78,48 +129,63 @@ while loop == 0:
         response_data = access_server(harvi_url)
         for item in response_data['harvi']:
            Solarp =  item['ectp1']
-           if Solarp < 50:
+           if Solarp < 75:
               Solarp = 0
-
 
         house = Gridp+Solarp
         Excessp = Solarp-house
         if Solarp-house <=0:
            Excessp = 0
-        #print ("Grid Voltage:",Gridv,"Vac")
-        #print ("Grid Frequency:",Gridf,"Hz")
+        print ("Grid Voltage:",Gridv,"Vac")
+        print ("Grid Frequency:",Gridf,"Hz")
         print ("Grid Power:",Gridp,"W")
         print ("Solar Power:",Solarp,"W")
         print ("House is using: ", house,"W")
         print ("Spare: ", Excessp,"W")
 
-        if  switch == 1 and (Gridp < -300): # If more than 300W after smartplug already on
-            print("Heater 2 on")
-            res = requests.post("http://192.168.1.251/cm?cmnd=Power%20On") # turn on smartplug 2
-            switch = 2 # smartplug 2 is on
+        if Gridp < 1:
+            GPIO.output(Green_LED_PIN, GPIO.HIGH)
+            GPIO.output(Yellow_LED_PIN, GPIO.LOW)
+            GPIO.output(Red_LED_PIN, GPIO.LOW)
+            print("House in eco mode Green led on")
 
-        if  switch == 0 and (Gridp < -300): # if no smartplugs are on and 300W or more sent to grid
-            print("Heater 1 on") 
-            res = requests.post("http://192.168.1.252/cm?cmnd=Power%20On") # turn on smartplug 1
-            switch = 1 # smartplug 1 is on
-            time.sleep(5)
-		
-        if  switch == 2 and (Gridp > 200): # if smartplug 2 is on and using more than 200W 
-            print("Heater 2 off")
-            res = requests.post("http://192.168.1.251/cm?cmnd=Power%20Off") # turn off smartplug 2
-            switch = 1 # only smartplug 1 is on
+        if  switch == 1 and (Gridp < -300):
+            catch_fail_html(h2_url+On)
+            switch = 2
             time.sleep(5)
 
-        if  switch == 1 and (Gridp > 200): # if smartplug 2 is on and using more than 200W
-            print("Heater 1 off")
-            res = requests.post("http://192.168.1.252/cm?cmnd=Power%20Off") # turn off smartplug 1
+        if  switch == 0 and (Gridp < -300):
+            catch_fail_html(h1_url+On)
+            switch = 1
+            time.sleep(5)
+
+        if  switch == 2 and (Gridp > 200):
+            catch_fail_html(h2_url+Off)
+            switch = 1
+            time.sleep(5)
+
+        if  switch == 1 and (Gridp > 200):
+            catch_fail_html(h1_url+Off)
             switch = 0
-        time.sleep(20)
-    GPIO.output(Red_LED_PIN, GPIO.HIGH)
-    time.sleep(1)
+            time.sleep(5)
+
+        if switch  == 0:
+            catch_fail_html(h1_url+Off)
+            catch_fail_html(h2_url+Off)
+        time.sleep(30)
+    print("post sleep")
+    elapsed_time = 0
     GPIO.output(Green_LED_PIN, GPIO.LOW)
-    time.sleep(1)
-    print("Red LED is on") # indicate power generated
+    GPIO.output(Yellow_LED_PIN, GPIO.LOW)
+    while elapsed_time <= 100:
+        if elapsed_time == 0:
+            start_time = time.time()
+        GPIO.output(Red_LED_PIN, GPIO.HIGH)
+        time.sleep(1)
+        GPIO.output(Red_LED_PIN, GPIO.LOW)
+        time.sleep(1)
+        elapsed_time = time.time()-start_time
+    print("Red LED is on")
     print("Green led is off")
-    time.sleep(600)
+
 
