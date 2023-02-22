@@ -28,8 +28,8 @@ GPIO.setup(Red_LED_PIN, GPIO.OUT)
 GPIO.setup(Green_LED_PIN, GPIO.OUT)
 GPIO.setup(Green2_LED_PIN, GPIO.OUT)
 
-username    = '14604241'
-password    = 'rbM8KEiLiVlyt2l5utwxAlCa'
+username    = 'you hub serial number'
+password    = 'Your password'
 eddi_url    = 'https://s18.myenergi.net/cgi-jstatus-E'
 zappi_url   = 'https://s18.myenergi.net/cgi-jstatus-Z'
 harvi_url   = 'https://s18.myenergi.net/cgi-jstatus-H'
