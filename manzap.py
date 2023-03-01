@@ -12,14 +12,14 @@ switch = 0
 loop = 0
 good = 0
 
-Red_LED_PIN = 8
-Green_LED_PIN = 10
-Green2_LED_PIN = 12
+Red_LED_PIN = 8 # Light denotes all power from grid
+Green_LED_PIN = 10 # On alone some solar power assisting grid
+Green2_LED_PIN = 12 # Both Green LEDs on indicates entire house is running on Solar power
 
 Off = 'cm?cmnd=Power%20Off'
 On = 'cm?cmnd=Power%20On'
-h2_url = 'http://192.168.1.251/'
-h1_url = 'http://192.168.1.252/'
+h2_url = 'http://192.168.1.251/' # Sonoff Smartplug S26 plug 2 
+h1_url = 'http://192.168.1.252/' # Sonoff Smartplug S26 plug 1
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
@@ -93,13 +93,14 @@ def compare_solar_to_grid(solar, grid):
     print("Turning off red LED and turning on 1 green LED")
 # end-of-function definition
 
-catch_fail_html(h2_url+Off)
+catch_fail_html(h2_url+Off) # Start by turning off both Smartplugs
 catch_fail_html(h1_url+Off)
-
+# On power up or reboot all LEDs on
 GPIO.output(Red_LED_PIN, GPIO.HIGH)
 GPIO.output(Green2_LED_PIN, GPIO.HIGH)
 GPIO.output(Green_LED_PIN, GPIO.HIGH)
 time.sleep(0.5)
+# Then all LEDs off
 GPIO.output(Red_LED_PIN, GPIO.LOW)
 GPIO.output(Green2_LED_PIN, GPIO.LOW)
 GPIO.output(Green_LED_PIN, GPIO.LOW)
@@ -109,7 +110,7 @@ while loop == 0:
     response_data = access_server(harvi_url)
     for item in response_data['harvi']:
        Solarp =  item['ectp1']
-       if Solarp < 65:
+       if Solarp < 65: # If Solar power is less than 65 assume no solar power
           Solarp = 0
           switch = 0
 
@@ -143,27 +144,27 @@ while loop == 0:
         compare_solar_to_grid(Solarp, Gridp)
 
 
-        if  switch == 1 and (Gridp < -300):
+        if  switch == 1 and (Gridp < -300): # If Plug 1 is on and there is sufficient power turn on plug 2
             catch_fail_html(h2_url+On)
             switch = 2
             time.sleep(5)
 
-        if  switch == 0 and (Gridp < -300):
+        if  switch == 0 and (Gridp < -300): # If there is sufficient power turn on Plug 1
             catch_fail_html(h1_url+On)
             switch = 1
             time.sleep(5)
 
-        if  switch == 2 and (Gridp > 200):
+        if  switch == 2 and (Gridp > 200): # If plug 1 is on and insufficient power turn plug 2 off
             catch_fail_html(h2_url+Off)
             switch = 1
             time.sleep(5)
 
-        if  switch == 1 and (Gridp > 200):
+        if  switch == 1 and (Gridp > 200): # If plug is on and there is insufficient power turn off plug 1
             catch_fail_html(h1_url+Off)
             switch = 0
             time.sleep(5)
 
-        if switch  == 0:
+        if switch  == 0: # If insufficient power turn off both plugs
             catch_fail_html(h1_url+Off)
             catch_fail_html(h2_url+Off)
         time.sleep(30)
