@@ -7,4 +7,8 @@ if the power is then higher still by 300W it turns on a second socket. I am sure
 ported to many different plaatforms. It was useful to m and maybe useful to others. I used the sonoff
 smart sokets flashed with Tomatsu. I used the sockets to turn on 500W heaters.
 I realise there is a considerable amount of code optimisation that could be carried out
-but for now this is working framework and gets to heats homes for zero cost
+but for now this is working framework and gets to heats homes for low cost until I get a battery for the excess
+
+I also ended up using a Pi Zero as the physical size meant I could house it in a smaller enclosure.
+
+I added a cronjob that reboots the Pi every hour
